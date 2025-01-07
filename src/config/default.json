@@ -1,0 +1,8 @@
+{
+    "DF_APP_ID": 12,
+    "DF_TENANT_ID": 1,
+    "DF_API_URL": "https://ubti-d-df-api.azurewebsites.net",
+    "DF_API_VERSION": "v1",
+    "PUBLIC_MENU_LOCATION" : "top"
+}
+
