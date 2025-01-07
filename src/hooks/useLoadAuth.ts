@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import Cookies from 'js-cookie';
 import { DiligenceFabricClient } from '@ubti/diligence-fabric-sdk';
-import { client, logger } from '../server/DF/sdk';
+import { logger } from '../server/DF/sdk';
  
 export const useAuth = () => {
   const [authTypeResult, setAuthTypeResult] = useState(null);
@@ -16,7 +16,7 @@ export const useAuth = () => {
           AuthenticationTypeCode: 'MS',
           CalledBy: undefined,
         };
-        const response = await client
+        const response: any = await client
           .getAuthenticationTypeService()
           .getAuthenticationType(AuthenticationTypeList);
  
