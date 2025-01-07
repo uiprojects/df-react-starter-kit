@@ -12,7 +12,8 @@ export const login = async (authenticationRequest: any) => {
         }
         return { status: 'SUCCESS', response, message: 'Login Successful!' };
       } else {
-        return { status: 'ERROR', message: response.Result?.Status };
+        const result: any = response.Result;
+        return { status: 'ERROR', message: result?.Status };
       }
     } else {
       return {

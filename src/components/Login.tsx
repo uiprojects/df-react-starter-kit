@@ -78,7 +78,7 @@ const Login: React.FC = () => {
       console.error("Login error:", err);
       Toast.fire({
         icon: "error",
-        text: err.message || "Login failed",
+        text: (err as Error).message || "Login failed",
         background: "red",
         color: "white",
       });

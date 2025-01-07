@@ -8,6 +8,11 @@ const router = createBrowserRouter([
         path: "/",
         element: <Main/>,
         children : [
+            // { index: true, element: <Navigate to="/login" replace /> },
+            {
+                path: "/",
+                element: <Login />,
+            },
             {
                 path : "/login",
                 element : <Login/>
