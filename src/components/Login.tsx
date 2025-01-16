@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import Swal from "sweetalert2";
 import { useNavigate } from "react-router-dom";
 import { PublicClientApplication } from "@azure/msal-browser";
-import logo from "../images/your-logo.png";
+import logo from "../assets/DF-Logo.svg";
 import microsoftIcon from "../images/microsoftIcon.svg";
 import { getDiligenceFabricSDK } from "../services/DFService";
 import config from "../config/default.json";
@@ -100,12 +100,12 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center px-3 py-3 mx-auto md:h-screen lg:py-0 bg-blue-800">
+    <div className="flex flex-col items-center justify-center px-3 py-3 mx-auto md:h-screen lg:py-0 bg-primary-100">
       <a
         href="https://ubtiinc.com"
         className="flex items-center mb-4 text-2xl font-semibold text-gray-900 dark:text-white"
       >
-        <img className="w-90 h-20 mr-2" src={logo} alt="UBTI" />
+        <img className="w-70 h-40 mr-2" src={logo} alt="UBTI" />
       </a>
       <div className="w-full bg-white rounded-lg shadow dark:border md:mt-0 sm:max-w-md xl:p-0 dark:bg-gray-800 dark:border-gray-700">
         <form onSubmit={addPosts}>
@@ -127,7 +127,7 @@ const Login: React.FC = () => {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
-                className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
+                className="w-full p-2.5 bg-gray-50 border border-bg-primary-100 rounded-lg focus:ring-primary-200 text-gray-900 focus: border-bg-primary-200 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
               />
             </div>
             <div>
@@ -144,12 +144,12 @@ const Login: React.FC = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
+                className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-primary-200 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
               />
               <button
                 type="button"
                 onClick={toggleShowPassword}
-                className="text-blue-500"
+                className="text-primary-50"
               >
                 Show/Hide Password
               </button>
@@ -161,7 +161,7 @@ const Login: React.FC = () => {
                   type="checkbox"
                   checked={rememberMe}
                   onChange={() => setRememberMe(!rememberMe)}
-                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800"
+                  className="w-4 h-4 text-primary-200 bg-gray-100 border-gray-300 rounded focus:ring-primary-200 dark:focus:ring-blue-600 dark:ring-offset-gray-800"
                 />
                 <label
                   htmlFor="remember"
@@ -173,7 +173,7 @@ const Login: React.FC = () => {
               <button
                 type="button"
                 onClick={() => navigate("/forgot-password")}
-                className="text-sm font-medium text-blue-600 dark:text-blue-500 hover:underline"
+                className="text-sm font-medium text-primary-600 dark:text-black-500 hover:underline"
               >
                 Forgot password?
               </button>
@@ -182,7 +182,7 @@ const Login: React.FC = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full p-2.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-4 focus:ring-blue-300 dark:focus:ring-blue-800"
+                className="w-full p-2.5 bg-primary-50 text-white rounded-lg"
               >
                 {loading ? "Signing in..." : "Sign in"}
               </button>
