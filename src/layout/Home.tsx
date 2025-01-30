@@ -1,11 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, Outlet } from "react-router-dom";
 import { CgProfile } from "react-icons/cg";
 import { getDiligenceFabricSDK } from "../services/DFService";
 import { DefaultIcon } from "../assets/icons";
 import config from "../config/default.json";
-import logo from "../images/your-logo.png";
+import logo from "../assets/DF-Logo.svg";
+import { FaChevronDown } from 'react-icons/fa';
 
 const Main: React.FC = () => {
   const navigate = useNavigate();
@@ -15,11 +16,21 @@ const Main: React.FC = () => {
   const [isDropdownOpen, setDropdownOpen] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const menuLocation = config.PUBLIC_MENU_LOCATION;
+  let userName: string = ""
+  const [open, setOpen] = useState(false);
+  const [username, setUsername] = useState('');
+  const toggleDropdown = () => {
+    setOpen(!open);
+  };
 
   const fetchDataMenu = async () => {
     try {
       const client = getDiligenceFabricSDK();
       const data = JSON.parse(localStorage.getItem("userData") || "{}");
+      userName = data.UserName
+      if (userName) {
+        setUsername(userName)
+      }
       const token = data.Token;
       if (!token) {
         console.error("User token not set. Redirecting to login...");
@@ -106,20 +117,18 @@ const Main: React.FC = () => {
       return (
         <div key={item.AppMenuID} className="relative flex flex-col space-y-2">
           <div
-            className={`flex items-center p-3 rounded-lg transition-colors duration-200 ${
-              item.children?.length
-                ? "cursor-pointer text-gray-600"
-                : "cursor-pointer hover:text-blue-500"
-            } ${isActive ? "bg-blue-100 text-blue-600 font-bold" : ""}`}
+            className={`flex items-center p-3 rounded-lg transition-colors duration-200 ${item.children?.length
+              ? "cursor-pointer text-gray-600"
+              : "cursor-pointer hover:text-blue-500"
+              } ${isActive ? "bg-blue-100 text-blue-600 font-bold" : ""}`}
             onClick={handleToggle}
           >
             <div className="w-6 h-6">{icon}</div>
             <span className="text-lg ml-3">{item.AppMenuLabel}</span>
             {item.children?.length > 0 && (
               <span
-                className={`ml-auto transition-transform transform ${
-                  isOpen ? "rotate-90" : ""
-                }`}
+                className={`ml-auto transition-transform transform ${isOpen ? "rotate-90" : ""
+                  }`}
               >
                 ▼
               </span>
@@ -136,6 +145,21 @@ const Main: React.FC = () => {
     });
   };
   const renderTopMenuItems = (menuItems: any[]) => {
+    const [hoveredMenu, setHoveredMenu] = useState(null);
+    const dropdownRef = useRef(null);
+
+    //needs work behaviour to be checked
+    const handleClickOutside = (event : any) => {
+        setHoveredMenu(null);
+      
+    };
+    useEffect(() => {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }, []);
+
     return menuItems.map((item: any) => {
       // const icon = <DefaultIcon />;
       const isActive = item.AppMenuID === activeMenu;
@@ -149,26 +173,44 @@ const Main: React.FC = () => {
       };
 
       return (
-        <div key={item.AppMenuID} className="relative">
+        <div key={item.AppMenuID} className="relative"
+          onMouseEnter={() => setHoveredMenu(item.AppMenuID)}
+        //  onMouseLeave={ () => setHoveredMenu(null)}
+        >
           <div
-            className={`flex items-center cursor-pointer ${
-              isActive ? "text-blue-600 font-bold" : ""
-            }`}
+            className={`flex items-center cursor-pointer  `}
             onClick={handleTopMenuClick}
           >
             {/* <div className="w-6 h-6">{icon}</div> */}
-            <span className="text-lg ml-5">{item.AppMenuLabel}</span>
+            <span className={`text-base  ml-5  font-bold hover:bg-primary-50 hover:text-white  ${isActive ? "text-white bg-primary-50" : ""}  `}>{item.AppMenuLabel}</span>
+            {item.children?.length > 0 && <FaChevronDown className="ml-2" />}
           </div>
 
-          {item.children?.length > 0 && isActive && (
+          {hoveredMenu === item.AppMenuID && item.children?.length > 0 && (
             <div className="absolute top-full left-0 mt-2 w-48 bg-white shadow-lg rounded-md z-50">
               {item.children.map((child: any) => (
-                <div
-                  key={child.AppMenuID}
-                  className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-                  onClick={() => handleItemClick(child)}
-                >
-                  {child.AppMenuLabel}
+                <div key={child.AppMenuID} className="relative">
+                  <div
+                    key={child.AppMenuID}
+                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                    onClick={() => handleItemClick(child)}
+                  >
+                    {child.AppMenuLabel}
+                  </div>
+                  {/* needs work */}
+                  {/* {child.children?.length > 0 && ( 
+                    <div className="absolute left-full top-0 mt-1 w-48 bg-white shadow-lg rounded-md z-50">
+                      {child.children.map((subChild: any) => (
+                        <div
+                          key={subChild.AppMenuID}
+                          className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                          onClick={() => handleItemClick(subChild)}
+                        >
+                          {subChild.AppMenuLabel}
+                        </div>
+                      ))}
+                    </div>
+                  )} */}
                 </div>
               ))}
             </div>
@@ -178,14 +220,14 @@ const Main: React.FC = () => {
     });
   };
   const renderProfileDropdown = () => (
-    <div className="relative">
+    <div className="relative ">
       <div
         className="cursor-pointer"
-        onClick={() => setDropdownOpen(!isDropdownOpen)}
+        onClick={toggleDropdown}
       >
-        <CgProfile size={40} style={{color : 'white'}} />
+        <CgProfile size={35} style={{ color: 'white' }} />
       </div>
-      {isDropdownOpen && (
+      {open && (
         <div className="absolute right-0 mt-2 w-48 bg-white shadow-lg rounded-md z-50">
           <ul className="py-2">
             <li
@@ -222,7 +264,7 @@ const Main: React.FC = () => {
           <nav>{renderSidebarMenuItems(nestedMenuItems)}</nav>
         </aside>
       ) : (
-        <header className="flex justify-between text-white items-center p-4 shadow-md border-b border-gray-200 bg-blue-800">
+        <header className="flex justify-between text-black items-center p-4 shadow-md border-b border-gray-200 bg-white">
           <div className="flex items-center space-x-4">
             <img src={logo} className="h-12" alt="Logo" />
             <nav className="flex space-x-4">
@@ -232,9 +274,9 @@ const Main: React.FC = () => {
         </header>
       )}
 
-      <div className="absolute top-4 right-4">{renderProfileDropdown()}</div>
+      <div className="absolute top-4 right-4 rounded-full mt-2 bg-primary-50 ">{renderProfileDropdown()}</div>
 
-      <main className="flex flex-col flex-grow">
+      <main className="flex flex-col bg-primary-100 flex-grow">
         <div className="p-5">
           <Outlet />
         </div>
