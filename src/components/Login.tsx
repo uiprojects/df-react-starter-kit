@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Swal from "sweetalert2";
 import { useNavigate } from "react-router-dom";
 import { PublicClientApplication } from "@azure/msal-browser";
@@ -6,6 +6,10 @@ import logo from "../assets/DF-Logo.svg";
 import microsoftIcon from "../images/microsoftIcon.svg";
 import { getDiligenceFabricSDK } from "../services/DFService";
 import config from "../config/default.json";
+import { useCookies } from 'react-cookie';
+import { FaEye, FaEyeSlash } from 'react-icons/fa'
+
+
 
 const msalConfig = {
   auth: {
@@ -36,14 +40,36 @@ const Toast = Swal.mixin({
 
 const Login: React.FC = () => {
   const [type, setType] = useState("password");
+  const [icon, setIcon] = useState("FaEyeSlash");
   const [loading, setLoading] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
+  const [rememberMeCheck, setRememberMeCheck] = useState(false);
+  const [cookies, setCookie, removeCookie] = useCookies(['username']);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (cookies.username) {
+      setUsername(cookies.username);
+      setRememberMe(true);
+      setRememberMeCheck(true)
+    }
+  }, [cookies]);
 
   const toggleShowPassword = () => {
     setType(type === "text" ? "password" : "text");
+  };
+
+  const handleUsernameChange = (e: any) => {
+    setUsername(e.target.value);
+    const newUserName = e.target.value
+    if (newUserName === cookies.username) {
+      setRememberMeCheck(true)
+    }
+    else {
+      setRememberMeCheck(false);
+    }
   };
 
   const addPosts = async (event: React.FormEvent) => {
@@ -58,11 +84,16 @@ const Login: React.FC = () => {
         password: password,
         AuthenticationTypeCode: "FORM",
       };
+      if (rememberMe) {
+        if (rememberMe) {
+          setCookie('username', username, { path: '/' });
+        } else {
+          removeCookie('username');
+        }
+      }
       const response = await client.getAuthService().login(authRequest);
-      console.log(response.Result);
-      console.log(response.Result.TenantID);
 
-      if (response.Result && response.Result.TenantID === config.DF_TENANT_ID ) {
+      if (response.Result && response.Result.TenantID === config.DF_TENANT_ID) {
         localStorage.setItem("userData", JSON.stringify(response.Result));
         Toast.fire({
           icon: "success",
@@ -125,7 +156,7 @@ const Login: React.FC = () => {
                 id="username"
                 placeholder="name@example.com"
                 value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                onChange={(e) => handleUsernameChange(e)}
                 required
                 className="w-full p-2.5 bg-gray-50 border border-bg-primary-100 rounded-lg focus:ring-primary-200 text-gray-900 focus: border-bg-primary-200 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
               />
@@ -146,6 +177,7 @@ const Login: React.FC = () => {
                 required
                 className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-primary-200 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
               />
+
               <button
                 type="button"
                 onClick={toggleShowPassword}
@@ -153,23 +185,28 @@ const Login: React.FC = () => {
               >
                 Show/Hide Password
               </button>
+
+
             </div>
             <div className="flex items-center justify-between">
-              <div className="flex items-start">
-                <input
-                  id="remember"
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={() => setRememberMe(!rememberMe)}
-                  className="w-4 h-4 text-primary-200 bg-gray-100 border-gray-300 rounded focus:ring-primary-200 dark:focus:ring-blue-600 dark:ring-offset-gray-800"
-                />
-                <label
-                  htmlFor="remember"
-                  className="ml-3 text-sm font-medium text-gray-900 dark:text-gray-300"
-                >
-                  Remember me
-                </label>
-              </div>
+
+              {!rememberMeCheck && (
+                <div className="flex items-start">
+                  <input
+                    id="remember"
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={() => setRememberMe(!rememberMe)}
+                    className="w-4 h-4 text-primary-200 bg-gray-100 border-gray-300 rounded focus:ring-primary-200 dark:focus:ring-blue-600 dark:ring-offset-gray-800"
+                  />
+                  <label
+                    htmlFor="remember"
+                    className="ml-3 text-sm font-medium text-gray-900 dark:text-gray-300"
+                  >
+                    Remember me
+                  </label>
+                </div>
+              )}
               <button
                 type="button"
                 onClick={() => navigate("/forgot-password")}
