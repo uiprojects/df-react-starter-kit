@@ -11,7 +11,7 @@ const Main: React.FC = () => {
   return (
     <div>
       <Outlet />
-      <footer className='flex justify-center'>© 2024 Copyright: Unlimited Innovations Ind Pvt Ltd</footer>
+      <footer className='flex justify-center'>© {new Date().getFullYear()} UB Technology Innovations, Inc.</footer>
     </div>
   );
 }
