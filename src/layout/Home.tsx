@@ -19,9 +19,25 @@ const Main: React.FC = () => {
   let userName: string = ""
   const [open, setOpen] = useState(false);
   const [username, setUsername] = useState('');
+  const [openMenus , setOpenMenus] = useState<{ [key : number] : boolean}>({})
   const toggleDropdown = () => {
     setOpen(!open);
   };
+
+  const handleToggle = (menuId : number) => {
+    setOpenMenus((prevState) => ({
+      ...prevState,
+      [menuId]: !prevState[menuId]
+    }) );
+  };
+
+  const sideMenuhandleItemClick = (item : any) => {
+    if(item.AppMenuURL){
+      navigate(item.AppMenuURL)
+    }
+    setActiveMenu(item.AppMenuID)
+  }
+
 
   const fetchDataMenu = async () => {
     try {
@@ -105,14 +121,7 @@ const Main: React.FC = () => {
     return menuItems.map((item: any) => {
       const icon = <DefaultIcon />;
       const isActive = item.AppMenuID === activeMenu;
-
-      const handleToggle = () => {
-        if (item.children?.length) {
-          setIsOpen(!isOpen);
-        } else {
-          handleItemClick(item);
-        }
-      };
+      const isSubmenuOpen = openMenus[item.AppMenuID] || false;
 
       return (
         <div key={item.AppMenuID} className="relative flex flex-col space-y-2 bg-primary-100">
@@ -120,22 +129,23 @@ const Main: React.FC = () => {
             className={`flex items-center p-2 rounded-lg transition-colors duration-200 ${item.children?.length
               ? "cursor-pointer text-black"
               : "cursor-pointer hover:text-primary-200"
-              } ${isActive ? "bg-blue-100 text-black font-bold  hover:text-primary-200 " : ""}`}
-            onClick={handleToggle}
+              } ${isActive ? "bg-primary-50 text-white font-bold  hover:text-white" : ""}`}
+            onClick={ () => sideMenuhandleItemClick(item)}
           >
             <div className="w-6 h-6">{icon}</div>
-            <span className="text-lg ml-3">{item.AppMenuLabel}</span>
+            <span className="text-base ml-3">{item.AppMenuLabel}</span>
             {item.children?.length > 0 && (
               <span
-                className={`ml-auto transition-transform transform ${isOpen ? "rotate-90" : ""
+                className={`ml-auto transition-transform transform ${isSubmenuOpen ? "rotate-90" : ""
                   }`}
+                  onClick={ () => handleToggle(item.AppMenuID)}
               >
-                ▼
+                <FaChevronDown></FaChevronDown>
               </span>
             )}
           </div>
 
-          {isOpen && item.children?.length > 0 && (
+          {isSubmenuOpen && item.children?.length > 0 && (
             <div className="ml-6 pl-4 border-l border-gray-300">
               {renderSidebarMenuItems(item.children)}
             </div>
