@@ -99,11 +99,7 @@ const Main: React.FC = () => {
   useEffect(() => {
     if (appMenuItems.length > 0) {
       const structuredMenu = organizeMenuHierarchy(appMenuItems);
-      const sidebarItems = structuredMenu.filter(
-        (item) =>
-          !["Profile", "Settings", "Notifications"].includes(item.AppMenuLabel)
-      );
-      setNestedMenuItems(sidebarItems);
+      setNestedMenuItems(structuredMenu);
     }
   }, [appMenuItems]);
 
