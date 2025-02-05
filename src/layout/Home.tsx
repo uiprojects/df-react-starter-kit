@@ -64,8 +64,6 @@ const Main: React.FC = () => {
         return;
       }
 
-      console.log(appMenuListResponse);
-
       setAppMenuItems(appMenuListResponse);
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -267,12 +265,7 @@ const Main: React.FC = () => {
       {open && (
         <div className="absolute right-0 mt-2 w-48 bg-white shadow-lg rounded-md z-50">
           <ul className="py-2">
-            <li
-              onClick={() => navigate("/profile")}
-              className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-            >
-              My Profile
-            </li>
+           
             <li
               onClick={() => navigate("/change-password")}
               className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
