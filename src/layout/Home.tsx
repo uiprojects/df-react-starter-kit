@@ -19,20 +19,20 @@ const Main: React.FC = () => {
   let userName: string = ""
   const [open, setOpen] = useState(false);
   const [username, setUsername] = useState('');
-  const [openMenus , setOpenMenus] = useState<{ [key : number] : boolean}>({})
+  const [openMenus, setOpenMenus] = useState<{ [key: number]: boolean }>({})
   const toggleDropdown = () => {
     setOpen(!open);
   };
 
-  const handleToggle = (menuId : number) => {
+  const handleToggle = (menuId: number) => {
     setOpenMenus((prevState) => ({
       ...prevState,
       [menuId]: !prevState[menuId]
-    }) );
+    }));
   };
 
-  const sideMenuhandleItemClick = (item : any) => {
-    if(item.AppMenuURL){
+  const sideMenuhandleItemClick = (item: any) => {
+    if (item.AppMenuURL) {
       navigate(item.AppMenuURL)
     }
     setActiveMenu(item.AppMenuID)
@@ -118,21 +118,24 @@ const Main: React.FC = () => {
       const isSubmenuOpen = openMenus[item.AppMenuID] || false;
 
       return (
-        <div key={item.AppMenuID} className="relative flex flex-col space-y-2 bg-primary-100">
+        <div key={item.AppMenuID} className="relative flex flex-col space-y-2 bg-white">
           <div
             className={`flex items-center p-2 rounded-lg transition-colors duration-200 ${item.children?.length
               ? "cursor-pointer text-black"
               : "cursor-pointer hover:text-primary-200"
               } ${isActive ? "bg-primary-50 text-white font-bold  hover:text-white" : ""}`}
-            onClick={ () => sideMenuhandleItemClick(item)}
+            onClick={() => sideMenuhandleItemClick(item)}
           >
-            <div className="w-6 h-6">{icon}</div>
-            <span className="text-base ml-3">{item.AppMenuLabel}</span>
+            <ul className="list-none">
+              <li className="text-base ml-3 inline">
+              {item.AppMenuLabel}
+              </li>
+            </ul>
             {item.children?.length > 0 && (
               <span
                 className={`ml-auto transition-transform transform ${isSubmenuOpen ? "rotate-90" : ""
                   }`}
-                  onClick={ () => handleToggle(item.AppMenuID)}
+                onClick={() => handleToggle(item.AppMenuID)}
               >
                 <FaChevronDown></FaChevronDown>
               </span>
@@ -185,19 +188,19 @@ const Main: React.FC = () => {
   }
 
   const renderTopMenuItems = (menuItems: any[]) => {
-    const [openMenu, setOpenMenu] = useState<number | null>(null); 
-    const menuRef = useRef<HTMLDivElement | null>(null); 
+    const [openMenu, setOpenMenu] = useState<number | null>(null);
+    const menuRef = useRef<HTMLDivElement | null>(null);
     const toggleChildMenu = (menuId: number) => {
       if (openMenu === menuId) {
-        setOpenMenu(null); 
+        setOpenMenu(null);
       } else {
-        setOpenMenu(menuId); 
+        setOpenMenu(menuId);
       }
     };
     useEffect(() => {
       const handleClickOutside = (event: MouseEvent) => {
         if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-          setOpenMenu(null); 
+          setOpenMenu(null);
         }
       };
       document.addEventListener("mousedown", handleClickOutside);
@@ -214,16 +217,16 @@ const Main: React.FC = () => {
               <div className="flex items-center">
                 <span
                   className="text-base font-bold cursor-pointer hover:text-primary-50"
-                  onClick={() => toggleChildMenu(item.AppMenuID)} 
+                  onClick={() => toggleChildMenu(item.AppMenuID)}
                 >
                   {item.AppMenuLabel}
                 </span>
-                
+
                 {item.childMenus && item.childMenus.length > 0 && (
                   <FaChevronDown className="ml-2 text-sm cursor-pointer" />
                 )}
               </div>
-           
+
               {openMenu === item.AppMenuID && item.childMenus && item.childMenus.length > 0 && (
                 <ul className="absolute left-0 mt-2 bg-white border rounded shadow-lg">
                   {item.childMenus.map((child, childIndex) => (
@@ -265,7 +268,7 @@ const Main: React.FC = () => {
       {open && (
         <div className="absolute right-0 mt-2 w-48 bg-white shadow-lg rounded-md z-50">
           <ul className="py-2">
-           
+
             <li
               onClick={() => navigate("/change-password")}
               className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
@@ -287,31 +290,45 @@ const Main: React.FC = () => {
   return (
     <div className="flex flex-col h-screen">
       {menuLocation === "side" ? (
-        <aside className="flex flex-col p-5  h-full w-64 bg-primary-100">
-          <div className="mb-8 cursor-pointer">
-            <img src={logo} className="h-24" alt="Logo" />
-          </div>
-          <nav>{renderSidebarMenuItems(nestedMenuItems)}</nav>
-        </aside>
+        <div className="flex h-full">
+          <aside className="flex flex-col p-5 h-full w-64 bg-white">
+            <div className="mb-8 cursor-pointer">
+              <img src={logo} className="h-24" alt="Logo" />
+            </div>
+            <nav>{renderSidebarMenuItems(nestedMenuItems)}</nav>
+          </aside>
+
+          <main className="flex-grow bg-primary-100 p-4 relative">
+          <div className="absolute top-4 right-4 rounded-full mt-2 bg-primary-50 ">{renderProfileDropdown()}</div>
+
+            <div className="p-5">
+              <Outlet />
+            </div>
+          </main>
+
+        </div>
       ) : (
-        <header className="flex justify-between text-black items-center p-4 shadow-md border-b border-gray-200 bg-white">
-          <div className="flex items-center space-x-4">
-            <img src={logo} className="h-12" alt="Logo" />
-            <nav className="flex space-x-4">
-              {renderTopMenuItems(nestedMenuItems)}
-            </nav>
-          </div>
-        </header>
+        <>
+          <header className="flex justify-between text-black items-center p-4 shadow-md border-b border-gray-200 bg-white">
+            <div className="flex items-center space-x-4">
+              <img src={logo} className="h-12" alt="Logo" />
+              <nav className="flex space-x-4">
+                {renderTopMenuItems(nestedMenuItems)}
+              </nav>
+            </div>
+          </header>
+          <div className="absolute top-4 right-4 rounded-full mt-2 bg-primary-50 ">{renderProfileDropdown()}</div>
+
+          <main className="flex flex-col bg-primary-100 flex-grow">
+            <div className="p-5">
+              <Outlet />
+            </div>
+          </main>
+        </>
       )}
 
-      <div className="absolute top-4 right-4 rounded-full mt-2 bg-primary-50 ">{renderProfileDropdown()}</div>
-
-      <main className="flex flex-col bg-primary-100 flex-grow">
-        <div className="p-5">
-          <Outlet />
-        </div>
-      </main>
     </div>
+
   );
 };
 
