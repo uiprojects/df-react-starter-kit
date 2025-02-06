@@ -19,9 +19,25 @@ const Main: React.FC = () => {
   let userName: string = ""
   const [open, setOpen] = useState(false);
   const [username, setUsername] = useState('');
+  const [openMenus, setOpenMenus] = useState<{ [key: number]: boolean }>({})
   const toggleDropdown = () => {
     setOpen(!open);
   };
+
+  const handleToggle = (menuId: number) => {
+    setOpenMenus((prevState) => ({
+      ...prevState,
+      [menuId]: !prevState[menuId]
+    }));
+  };
+
+  const sideMenuhandleItemClick = (item: any) => {
+    if (item.AppMenuURL) {
+      navigate(item.AppMenuURL)
+    }
+    setActiveMenu(item.AppMenuID)
+  }
+
 
   const fetchDataMenu = async () => {
     try {
@@ -47,8 +63,6 @@ const Main: React.FC = () => {
         setAppMenuItems([]);
         return;
       }
-
-      console.log(appMenuListResponse);
 
       setAppMenuItems(appMenuListResponse);
     } catch (error) {
@@ -83,11 +97,7 @@ const Main: React.FC = () => {
   useEffect(() => {
     if (appMenuItems.length > 0) {
       const structuredMenu = organizeMenuHierarchy(appMenuItems);
-      const sidebarItems = structuredMenu.filter(
-        (item) =>
-          !["Profile", "Settings", "Notifications"].includes(item.AppMenuLabel)
-      );
-      setNestedMenuItems(sidebarItems);
+      setNestedMenuItems(structuredMenu);
     }
   }, [appMenuItems]);
 
@@ -105,37 +115,34 @@ const Main: React.FC = () => {
     return menuItems.map((item: any) => {
       const icon = <DefaultIcon />;
       const isActive = item.AppMenuID === activeMenu;
-
-      const handleToggle = () => {
-        if (item.children?.length) {
-          setIsOpen(!isOpen);
-        } else {
-          handleItemClick(item);
-        }
-      };
+      const isSubmenuOpen = openMenus[item.AppMenuID] || false;
 
       return (
-        <div key={item.AppMenuID} className="relative flex flex-col space-y-2">
+        <div key={item.AppMenuID} className="relative flex flex-col space-y-2 bg-white">
           <div
-            className={`flex items-center p-3 rounded-lg transition-colors duration-200 ${item.children?.length
-              ? "cursor-pointer text-gray-600"
-              : "cursor-pointer hover:text-blue-500"
-              } ${isActive ? "bg-blue-100 text-blue-600 font-bold" : ""}`}
-            onClick={handleToggle}
+            className={`flex items-center p-2 rounded-lg transition-colors duration-200 ${item.children?.length
+              ? "cursor-pointer text-black"
+              : "cursor-pointer hover:text-primary-200"
+              } ${isActive ? "bg-primary-50 text-white font-bold  hover:text-white" : ""}`}
+            onClick={() => sideMenuhandleItemClick(item)}
           >
-            <div className="w-6 h-6">{icon}</div>
-            <span className="text-lg ml-3">{item.AppMenuLabel}</span>
+            <ul className="list-none">
+              <li className="text-base ml-3 inline">
+              {item.AppMenuLabel}
+              </li>
+            </ul>
             {item.children?.length > 0 && (
               <span
-                className={`ml-auto transition-transform transform ${isOpen ? "rotate-90" : ""
+                className={`ml-auto transition-transform transform ${isSubmenuOpen ? "rotate-90" : ""
                   }`}
+                onClick={() => handleToggle(item.AppMenuID)}
               >
-                ▼
+                <FaChevronDown></FaChevronDown>
               </span>
             )}
           </div>
 
-          {isOpen && item.children?.length > 0 && (
+          {isSubmenuOpen && item.children?.length > 0 && (
             <div className="ml-6 pl-4 border-l border-gray-300">
               {renderSidebarMenuItems(item.children)}
             </div>
@@ -144,81 +151,112 @@ const Main: React.FC = () => {
       );
     });
   };
-  const renderTopMenuItems = (menuItems: any[]) => {
-    const [hoveredMenu, setHoveredMenu] = useState(null);
-    const dropdownRef = useRef(null);
 
-    //needs work behaviour to be checked
-    const handleClickOutside = (event : any) => {
-        setHoveredMenu(null);
-      
+
+  const DropdownMenu = ({ items }) => {
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+    return (
+      <div
+        className="relative group"
+        onMouseEnter={() => setIsMenuOpen(true)}
+        onMouseLeave={() => setIsMenuOpen(false)}
+      >
+        <button className="py-2 px-4 hover:bg-primary-50 text-white">
+          {items.AppMenuLabel}
+        </button>
+        {items.childMenus && (
+          <div className={`absolute left-1 mt-2 bg-white border rounder shadow-lg ${isMenuOpen ? "block" : "hidden"}  `}>
+            <ul className="py-2">
+              {items.childMenus.map((childItem, index) => (
+                <li key={index} className="relative group">
+                  <a href={childItem.link} className="block px-4 py-2 hover:bg-gray-100">
+                    {childItem.AppMenuLabel}
+                  </a>
+                  {childItem.child_Menus && (
+                    <div className="absolute left-full top-0 mt-0 bg-white border rounded shadow-lg hidden group-hover:block">
+                      <DropdownMenu items={childItem}></DropdownMenu>
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  const renderTopMenuItems = (menuItems: any[]) => {
+    const [openMenu, setOpenMenu] = useState<number | null>(null);
+    const menuRef = useRef<HTMLDivElement | null>(null);
+    const toggleChildMenu = (menuId: number) => {
+      if (openMenu === menuId) {
+        setOpenMenu(null);
+      } else {
+        setOpenMenu(menuId);
+      }
     };
     useEffect(() => {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => {
-        document.removeEventListener('mousedown', handleClickOutside);
-      };
-    }, []);
-
-    return menuItems.map((item: any) => {
-      // const icon = <DefaultIcon />;
-      const isActive = item.AppMenuID === activeMenu;
-
-      const handleTopMenuClick = () => {
-        if (item.children?.length) {
-          setActiveMenu(item.AppMenuID === activeMenu ? "" : item.AppMenuID);
-        } else {
-          handleItemClick(item);
+      const handleClickOutside = (event: MouseEvent) => {
+        if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+          setOpenMenu(null);
         }
       };
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => {
+        document.removeEventListener("mousedown", handleClickOutside);
+      };
+    }, []);
+    return (
+      <div className="relative" ref={menuRef}>
+        <ul className="flex items-center space-x-4">
+          {menuItems.map((item, index) => (
+            <li key={index} className="relative">
+              {/* Top-level menu label */}
+              <div className="flex items-center">
+                <span
+                  className="text-base font-bold cursor-pointer hover:text-primary-50"
+                  onClick={() => toggleChildMenu(item.AppMenuID)}
+                >
+                  {item.AppMenuLabel}
+                </span>
 
-      return (
-        <div key={item.AppMenuID} className="relative"
-          onMouseEnter={() => setHoveredMenu(item.AppMenuID)}
-        //  onMouseLeave={ () => setHoveredMenu(null)}
-        >
-          <div
-            className={`flex items-center cursor-pointer  `}
-            onClick={handleTopMenuClick}
-          >
-            {/* <div className="w-6 h-6">{icon}</div> */}
-            <span className={`text-base  ml-5  font-bold hover:bg-primary-50 hover:text-white  ${isActive ? "text-white bg-primary-50" : ""}  `}>{item.AppMenuLabel}</span>
-            {item.children?.length > 0 && <FaChevronDown className="ml-2" />}
-          </div>
+                {item.childMenus && item.childMenus.length > 0 && (
+                  <FaChevronDown className="ml-2 text-sm cursor-pointer" />
+                )}
+              </div>
 
-          {hoveredMenu === item.AppMenuID && item.children?.length > 0 && (
-            <div className="absolute top-full left-0 mt-2 w-48 bg-white shadow-lg rounded-md z-50">
-              {item.children.map((child: any) => (
-                <div key={child.AppMenuID} className="relative">
-                  <div
-                    key={child.AppMenuID}
-                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-                    onClick={() => handleItemClick(child)}
-                  >
-                    {child.AppMenuLabel}
-                  </div>
-                  {/* needs work */}
-                  {/* {child.children?.length > 0 && ( 
-                    <div className="absolute left-full top-0 mt-1 w-48 bg-white shadow-lg rounded-md z-50">
-                      {child.children.map((subChild: any) => (
-                        <div
-                          key={subChild.AppMenuID}
-                          className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-                          onClick={() => handleItemClick(subChild)}
-                        >
-                          {subChild.AppMenuLabel}
-                        </div>
-                      ))}
-                    </div>
-                  )} */}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      );
-    });
+              {openMenu === item.AppMenuID && item.childMenus && item.childMenus.length > 0 && (
+                <ul className="absolute left-0 mt-2 bg-white border rounded shadow-lg">
+                  {item.childMenus.map((child, childIndex) => (
+                    <li key={childIndex} className="relative group">
+                      <div className="flex items-center px-4 py-2 hover:bg-gray-200 cursor-pointer">
+                        <span>{child.AppMenuLabel}</span>
+                        {child.child_Menus && child.child_Menus.length > 0 && (
+                          <FaChevronDown className="ml-2 text-sm" />
+                        )}
+                      </div>
+                      {child.child_Menus && child.child_Menus.length > 0 && (
+                        <ul className="absolute left-full top-0 mt-0 bg-white border rounded shadow-lg hidden group-hover:block">
+                          {child.child_Menus.map((subChild, subChildIndex) => (
+                            <li key={subChildIndex} className="px-4 py-2 hover:bg-gray-200">
+                              {subChild.AppMenuLabel}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
   };
+
   const renderProfileDropdown = () => (
     <div className="relative ">
       <div
@@ -230,12 +268,7 @@ const Main: React.FC = () => {
       {open && (
         <div className="absolute right-0 mt-2 w-48 bg-white shadow-lg rounded-md z-50">
           <ul className="py-2">
-            <li
-              onClick={() => navigate("/profile")}
-              className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-            >
-              My Profile
-            </li>
+
             <li
               onClick={() => navigate("/change-password")}
               className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
@@ -257,31 +290,45 @@ const Main: React.FC = () => {
   return (
     <div className="flex flex-col h-screen">
       {menuLocation === "side" ? (
-        <aside className="flex flex-col p-5 bg-blue-800 h-full w-64">
-          <div className="mb-8 cursor-pointer">
-            <img src={logo} className="h-24" alt="Logo" />
-          </div>
-          <nav>{renderSidebarMenuItems(nestedMenuItems)}</nav>
-        </aside>
+        <div className="flex h-full">
+          <aside className="flex flex-col p-5 h-full w-64 bg-white">
+            <div className="mb-8 cursor-pointer">
+              <img src={logo} className="h-24" alt="Logo" />
+            </div>
+            <nav>{renderSidebarMenuItems(nestedMenuItems)}</nav>
+          </aside>
+
+          <main className="flex-grow bg-primary-100 p-4 relative">
+          <div className="absolute top-4 right-4 rounded-full mt-2 bg-primary-50 ">{renderProfileDropdown()}</div>
+
+            <div className="p-5">
+              <Outlet />
+            </div>
+          </main>
+
+        </div>
       ) : (
-        <header className="flex justify-between text-black items-center p-4 shadow-md border-b border-gray-200 bg-white">
-          <div className="flex items-center space-x-4">
-            <img src={logo} className="h-12" alt="Logo" />
-            <nav className="flex space-x-4">
-              {renderTopMenuItems(nestedMenuItems)}
-            </nav>
-          </div>
-        </header>
+        <>
+          <header className="flex justify-between text-black items-center p-4 shadow-md border-b border-gray-200 bg-white">
+            <div className="flex items-center space-x-4">
+              <img src={logo} className="h-12" alt="Logo" />
+              <nav className="flex space-x-4">
+                {renderTopMenuItems(nestedMenuItems)}
+              </nav>
+            </div>
+          </header>
+          <div className="absolute top-4 right-4 rounded-full mt-2 bg-primary-50 ">{renderProfileDropdown()}</div>
+
+          <main className="flex flex-col bg-primary-100 flex-grow">
+            <div className="p-5">
+              <Outlet />
+            </div>
+          </main>
+        </>
       )}
 
-      <div className="absolute top-4 right-4 rounded-full mt-2 bg-primary-50 ">{renderProfileDropdown()}</div>
-
-      <main className="flex flex-col bg-primary-100 flex-grow">
-        <div className="p-5">
-          <Outlet />
-        </div>
-      </main>
     </div>
+
   );
 };
 
