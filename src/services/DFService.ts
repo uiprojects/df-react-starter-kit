@@ -8,6 +8,7 @@ export const getDiligenceFabricSDK = () => {
         "DF_APP_ID": config.DF_APP_ID,
         "DF_TENANT_ID": config.DF_TENANT_ID,
         "DF_API_URL": config.DF_API_URL,
+        "DF_AppEnvironmentCODE": config.DF_AppEnvironmentCODE,
         "DF_API_VERSION": config.DF_API_VERSION
     };
     const client = new DiligenceFabricClient(dfConfig);
