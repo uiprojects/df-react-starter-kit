@@ -8,8 +8,8 @@ import { getDiligenceFabricSDK } from "../services/DFService";
 import config from "../config/default.json";
 import { useCookies } from 'react-cookie';
 import { FaEye, FaEyeSlash } from 'react-icons/fa'
-
-
+ 
+ 
 const Toast = Swal.mixin({
   toast: true,
   position: "top-end",
@@ -22,7 +22,7 @@ const Toast = Swal.mixin({
     toast.addEventListener("mouseleave", Swal.resumeTimer);
   },
 });
-
+ 
 const Login: React.FC = () => {
   const [type, setType] = useState("password");
   const [icon, setIcon] = useState("FaEyeSlash");
@@ -34,56 +34,56 @@ const Login: React.FC = () => {
   const [cookies, setCookie, removeCookie] = useCookies(['username']);
   const [msalApp, setMsalApp] = useState<PublicClientApplication | null>(null);
   const navigate = useNavigate();
-
+ 
   useEffect(() => {
     if (cookies.username) {
       setUsername(cookies.username);
       setRememberMe(true);
       setRememberMeCheck(true)
     }
-
-
+ 
     const fetchMsalConfig = async () => {
       try {
         const client = getDiligenceFabricSDK()
         const AuthenticationTypeList = {
-          TenantID: undefined,
-          AuthenticationTypeCode: 'MS',
-          CalledBy: undefined
+          AppID: config.DF_APP_ID,
+          TenantID: config.DF_TENANT_ID,
+          AppEnvironmentCODE: config.DF_AppEnvironmentCODE
         }
-        const response = await client.getAuthenticationTypeService().getAuthenticationType(AuthenticationTypeList)
-
+ 
+        const response = await client.getAuthenticationTypeService().getAuthenticationDownStreamType(AuthenticationTypeList)
+ 
         const msalConfig = {
           auth: {
             clientId: response.Result.ClientOrAppIDConfig,
             authority: `https://login.microsoftonline.com/common`,
-            redirectUri: window.location.origin + "/login",
+            redirectUri: response.Result.AppEnvironmentURL + "/auth/login",
           },
           cache: {
             cacheLocation: "sessionStorage",
             storeAuthStateInCookie: false,
           },
         };
-
+ 
         const Instance = new PublicClientApplication(msalConfig);
         await Instance.initialize();
         await Instance.handleRedirectPromise()
         setMsalApp(Instance)
-
+ 
       }
       catch (error) {
          console.log(error)
       }
     }
-
+ 
     fetchMsalConfig();
-
+ 
   }, [cookies]);
-
+ 
   const toggleShowPassword = () => {
     setType(type === "text" ? "password" : "text");
   };
-
+ 
   const handleUsernameChange = (e: any) => {
     setUsername(e.target.value);
     const newUserName = e.target.value
@@ -94,22 +94,22 @@ const Login: React.FC = () => {
       setRememberMeCheck(false);
     }
   };
-
+ 
   const handleLogin = async (authRequest: any) => {
-
+ 
     try {
       setLoading(true);
       const client = getDiligenceFabricSDK();
-
+ 
       const response = await client.getAuthService().login(authRequest);
-
+ 
       if (rememberMe && authRequest.AuthenticationTypeCode == 'FORM') {
         setCookie('username', username, { path: '/' });
       }
       else {
         removeCookie('username');
       }
-
+ 
       if (response.Result && response.Result.TenantID === config.DF_TENANT_ID) {
         localStorage.setItem("userData", JSON.stringify(response.Result));
         Toast.fire({
@@ -136,29 +136,29 @@ const Login: React.FC = () => {
     finally {
       setLoading(false);
     }
-
+ 
   }
-
+ 
   const formLogin = async (event: React.FormEvent) => {
     event.preventDefault();
-
+ 
     const authRequest = {
       username: username,
       password: password,
       AuthenticationTypeCode: "FORM",
     };
-
+ 
     await handleLogin(authRequest);
-
+ 
   };
-
+ 
   const microsoftLogin = async () => {
     try {
-
+ 
       const loginResponse = await msalApp?.loginPopup({
         scopes: ["openid", "profile", "User.Read"],
       });
-
+ 
       if (loginResponse) {
         await handleLogin(
           {
@@ -174,7 +174,7 @@ const Login: React.FC = () => {
       setLoading(false);
     }
   };
-
+ 
   return (
     <div className="flex flex-col items-center justify-center px-3 py-3 mx-auto md:h-screen lg:py-0 bg-primary-100">
       <a
@@ -220,7 +220,7 @@ const Login: React.FC = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-primary-200 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white pr-10" 
+                className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-primary-200 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white pr-10"
               />
               <button
                 type="button"
@@ -232,7 +232,7 @@ const Login: React.FC = () => {
               </button>
             </div>
             <div className="flex items-center justify-between">
-
+ 
               {!rememberMeCheck && (
                 <div className="flex items-start">
                   <input
@@ -285,5 +285,6 @@ const Login: React.FC = () => {
     </div>
   );
 };
-
-export default Login;
+ 
+export default Login; 
+ 
