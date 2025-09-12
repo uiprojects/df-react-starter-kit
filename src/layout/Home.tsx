@@ -27,12 +27,6 @@ const Main: React.FC = () => {
   const [AppLogo, setAppLogo] = useState("");
 
   useEffect(() => {
-    
-      console.log("AppLogo updated:", AppLogo);
-    
-  }, [AppLogo]);
-
-  useEffect(() => {
     const fetchLogo = async () => {
       try {
         const client = getDiligenceFabricSDK();
@@ -40,14 +34,11 @@ const Main: React.FC = () => {
           AppID: config.DF_APP_ID,
           TenantID: config.DF_TENANT_ID
         }
+        
         const logoResponse = await client.getApplicationService().getLogo(payload);
         const resdata = logoResponse as any;
 
-        console.log("Logo response:", resdata.Result.LogoBase64);
-
         setAppLogo(`data:image/png;base64,${resdata.Result.LogoBase64}`);
-
-        console.log("AppLogo set to:", AppLogo);
 
       } catch (error) {
         console.error('Failed to fetch logo:', error);
