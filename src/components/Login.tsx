@@ -102,7 +102,7 @@ const Login: React.FC = () => {
       const client = getDiligenceFabricSDK();
 
       const response = await client.getAuthService().login(authRequest);
-
+      console.log("Login response:", response);
       if (rememberMe && authRequest.AuthenticationTypeCode == 'FORM') {
         setCookie('username', username, { path: '/' });
       }
