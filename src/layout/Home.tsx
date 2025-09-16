@@ -24,6 +24,30 @@ const Main: React.FC = () => {
     setOpen(!open);
   };
 
+  const [AppLogo, setAppLogo] = useState("");
+
+  useEffect(() => {
+    const fetchLogo = async () => {
+      try {
+        const client = getDiligenceFabricSDK();
+        const payload = {
+          AppID: config.DF_APP_ID,
+          TenantID: config.DF_TENANT_ID
+        }
+        
+        const logoResponse = await client.getApplicationService().getLogo(payload);
+        const resdata = logoResponse as any;
+
+        setAppLogo(`data:image/png;base64,${resdata.Result.LogoBase64}`);
+
+      } catch (error) {
+        console.error('Failed to fetch logo:', error);
+      }
+    };
+ 
+    fetchLogo();
+  }, []);
+ 
   const handleToggle = (menuId: number) => {
     setOpenMenus((prevState) => ({
       ...prevState,
@@ -293,7 +317,11 @@ const Main: React.FC = () => {
         <div className="flex h-full">
           <aside className="flex flex-col p-5 h-full w-64 bg-white">
             <div className="mb-8 cursor-pointer">
-              <img src={logo} className="h-24" alt="Logo" />
+              <img
+                src={AppLogo && AppLogo !== 'null' ? AppLogo : logo}
+                className="h-24"
+                alt="Logo"
+              />
             </div>
             <nav>{renderSidebarMenuItems(nestedMenuItems)}</nav>
           </aside>
@@ -311,7 +339,11 @@ const Main: React.FC = () => {
         <>
           <header className="flex justify-between text-black items-center p-4 shadow-md border-b border-gray-200 bg-white">
             <div className="flex items-center space-x-4">
-              <img src={logo} className="h-12" alt="Logo" />
+              <img
+                src={AppLogo && AppLogo !== 'null' ? AppLogo : logo}
+                className="h-12"
+                alt="Logo"
+              />
               <nav className="flex space-x-4">
                 {renderTopMenuItems(nestedMenuItems)}
               </nav>
