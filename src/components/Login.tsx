@@ -8,6 +8,7 @@ import { getDiligenceFabricSDK } from "../services/DFService";
 import config from "../config/default.json";
 import { useCookies } from 'react-cookie';
 import { FaEye, FaEyeSlash } from 'react-icons/fa'
+import { AuthenticationDownStreamType } from "@ubti/diligence-fabric-sdk/build/main/types/auth/authType/request/authentication-downstream-type";
  
  
 const Toast = Swal.mixin({
@@ -45,9 +46,9 @@ const Login: React.FC = () => {
     const fetchMsalConfig = async () => {
       try {
         const client = getDiligenceFabricSDK()
-        const AuthenticationTypeList = {
-          AppID: config.DF_APP_ID,
-          TenantID: config.DF_TENANT_ID,
+        const AuthenticationTypeList: AuthenticationDownStreamType = {
+          AppID: parseInt(config.DF_APP_ID),
+          TenantID: parseInt(config.DF_TENANT_ID),
           AppEnvironmentCODE: config.DF_AppEnvironmentCODE
         }
  
@@ -110,7 +111,7 @@ const Login: React.FC = () => {
         removeCookie('username');
       }
  
-      if (response.Result && response.Result.TenantID === config.DF_TENANT_ID) {
+      if (response.Result && response.Result.TenantID?.toString() === config.DF_TENANT_ID) {
         localStorage.setItem("userData", JSON.stringify(response.Result));
         Toast.fire({
           icon: "success",
