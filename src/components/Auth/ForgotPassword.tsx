@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getDiligenceFabricSDK } from "../../services/DFService";
 import { showToast } from "../../utils/toastUtils";
+import config from "../../config/default.json";
 
 
 
@@ -16,21 +16,39 @@ const ForgotPassword: React.FC = () => {
         setIsLoading(true);
 
         try {
-            const client = getDiligenceFabricSDK();
+            const userData = JSON.parse(localStorage.getItem("userData") || "{}");
+            const token = userData.token;
 
-            const response = await client.getAuthService().forgotPassword({email : workEmail});
-            console.log(response);
-             
-            if (response.StatusCode == 200) {
-                showToast("Email Send","success")
+            // V3 SDK: POST /api/v3/Auth/forgot-password
+            // Using fetch directly since SDK doesn't expose forgotPassword endpoint properly  
+            const response = await fetch(`${config.DF_API_URL}/api/v3/Auth/forgot-password`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token && { 'Authorization': `Bearer ${token}` })
+                },
+                body: JSON.stringify({
+                    email: workEmail,
+                    productCode: config.DF_PRODUCT_CODE
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error('Forgot password request failed');
+            }
+
+            const result = await response.json();
+            console.log('[ForgotPassword] Response:', result);
+            
+            if (result) {
+                showToast("Email sent successfully","success")
                 setIsLoading(false)
                 navigate('/');
-              } 
-              else {
-                throw new Error(response.Message || "Forgot Password failed");
-              }
+            } else {
+                throw new Error("Forgot Password failed");
+            }
         } catch (error) {
-            showToast("Forgot password change Failed","error")
+            showToast("Forgot password request failed","error")
             console.error("Error Forgot Password:", error);
         } finally {
             setIsLoading(false);

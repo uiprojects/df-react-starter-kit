@@ -3,7 +3,6 @@ import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, Outlet } from "react-router-dom";
 import { CgProfile } from "react-icons/cg";
 import { getDiligenceFabricSDK } from "../services/DFService";
-import { DefaultIcon } from "../assets/icons";
 import config from "../config/default.json";
 import logo from "../assets/DF-Logo.svg";
 import { FaChevronDown } from 'react-icons/fa';
@@ -13,12 +12,8 @@ const Main: React.FC = () => {
   const [appMenuItems, setAppMenuItems] = useState<any[]>([]);
   const [nestedMenuItems, setNestedMenuItems] = useState<any[]>([]);
   const [activeMenu, setActiveMenu] = useState<string>("");
-  const [isDropdownOpen, setDropdownOpen] = useState(false);
-  const [isOpen, setIsOpen] = useState(false);
   const menuLocation = config.PUBLIC_MENU_LOCATION;
-  let userName: string = ""
   const [open, setOpen] = useState(false);
-  const [username, setUsername] = useState('');
   const [openMenus, setOpenMenus] = useState<{ [key: number]: boolean }>({})
   const toggleDropdown = () => {
     setOpen(!open);
@@ -32,10 +27,10 @@ const Main: React.FC = () => {
   };
 
   const sideMenuhandleItemClick = (item: any) => {
-    if (item.AppMenuURL) {
-      navigate(item.AppMenuURL)
+    if (item.AppMenuActionUrl) {
+      navigate(item.AppMenuActionUrl)
     }
-    setActiveMenu(item.AppMenuID)
+    setActiveMenu(item.AppMenuId)
   }
 
 
@@ -43,28 +38,62 @@ const Main: React.FC = () => {
     try {
       const client = getDiligenceFabricSDK();
       const data = JSON.parse(localStorage.getItem("userData") || "{}");
-      userName = data.UserName
-      if (userName) {
-        setUsername(userName)
-      }
-      const token = data.Token;
+      console.log('[Home] userData from localStorage:', data);
+      
+      const token = data.token || data.Token;
       if (!token) {
         console.error("User token not set. Redirecting to login...");
         navigate("/login");
         return;
       }
 
-      const appMenuListResponse = await client
-        .getApplicationRoleService()
-        .getAllAccessibleMenus();
-
-      if (!appMenuListResponse || !Array.isArray(appMenuListResponse)) {
-        console.error("Invalid menu response:", appMenuListResponse);
+      // ✅ Extract required data for role-based menus
+      const appId = data.app?.appId || data.appId;
+      const userId = data.userId;
+      const tenantId = data.tenantId;
+      const appEnvironmentCode = data.appEnvironmentCode || "PROD";
+      
+      console.log('[Home] User data:', { appId, userId, tenantId, appEnvironmentCode });
+      
+      if (!client) {
+        console.error('[Home] ❌ Client is null - cannot fetch menus');
         setAppMenuItems([]);
         return;
       }
+      
+      // ✅ Use role-based menu endpoint
+      if (appId && userId && tenantId) {
+        console.log('[Home] ✅ Fetching role-based menus for appId:', appId);
+        
+        const queryParams: any = {
+          tenantId: tenantId,
+          userId: userId,
+          appId: appId,
+          appEnvironmentCode: appEnvironmentCode,  // ✅ From MS login response
+          pageSize: 100
+        };
+        
+        const response = await client.api.v3.userAppRole.menus.get({
+          queryParameters: queryParams
+        });
+        
+        console.log('[Home] 🔍 Role-based menu response:', response);
+        
+        // V3 SDK returns data directly as array
+        let appMenuListResponse = response || [];
+        
+        if (!appMenuListResponse || !Array.isArray(appMenuListResponse)) {
+          console.error("[Home] ❌ Invalid menu response - expected array, got:", typeof appMenuListResponse, appMenuListResponse);
+          setAppMenuItems([]);
+          return;
+        }
 
-      setAppMenuItems(appMenuListResponse);
+        console.log('[Home] ✅ Setting', appMenuListResponse.length, 'role-based menu items');
+        setAppMenuItems(appMenuListResponse);
+      } else {
+        console.warn('[Home] ⚠️ Missing required data (appId, userId, or tenantId) - cannot fetch role-based menus');
+        setAppMenuItems([]);
+      }
     } catch (error) {
       console.error("Error fetching data:", error);
       navigate("/login");
@@ -75,15 +104,28 @@ const Main: React.FC = () => {
     const itemMap: { [key: number]: any } = {};
     const roots: any[] = [];
 
+    // Handle both camelCase (from userAppRole.menus) and PascalCase (from appMenu) responses
     items.forEach((item) => {
-      itemMap[item.AppMenuID] = { ...item, children: [] };
+      const menuId = item.appMenuId || item.AppMenuId;
+      itemMap[menuId] = { 
+        ...item, 
+        children: [],
+        // Normalize to PascalCase for consistency with existing component code
+        AppMenuId: menuId,
+        AppMenuLabel: item.appMenuLabel || item.AppMenuLabel,
+        AppMenuActionUrl: item.appMenuActionUrl || item.AppMenuActionUrl,
+        ParentAppMenuId: item.parentAppMenuId || item.ParentAppMenuId || 0
+      };
     });
 
     items.forEach((item) => {
-      if (item.ParenAppMenuID === 0) {
-        roots.push(itemMap[item.AppMenuID]);
-      } else if (itemMap[item.ParenAppMenuID]) {
-        itemMap[item.ParenAppMenuID].children.push(itemMap[item.AppMenuID]);
+      const menuId = item.appMenuId || item.AppMenuId;
+      const parentMenuId = item.parentAppMenuId || item.ParentAppMenuId || 0;
+      
+      if (parentMenuId === 0 || parentMenuId === null) {
+        roots.push(itemMap[menuId]);
+      } else if (itemMap[parentMenuId]) {
+        itemMap[parentMenuId].children.push(itemMap[menuId]);
       }
     });
 
@@ -96,8 +138,17 @@ const Main: React.FC = () => {
 
   useEffect(() => {
     if (appMenuItems.length > 0) {
+      // console.log('[Home] 🔧 Organizing menu hierarchy for', appMenuItems.length, 'items');
+      // console.log('[Home] 🔧 First menu item sample:', appMenuItems[0]);
+      // console.log('[Home] 🔧 First menu item keys:', appMenuItems[0] ? Object.keys(appMenuItems[0]) : 'none');
+      
       const structuredMenu = organizeMenuHierarchy(appMenuItems);
+      // console.log('[Home] 🔧 Structured menu result:', structuredMenu);
+      // console.log('[Home] 🔧 Root menu count:', structuredMenu.length);
+      
       setNestedMenuItems(structuredMenu);
+    } else {
+      // console.log('[Home] 🔧 No menu items to organize');
     }
   }, [appMenuItems]);
 
@@ -106,19 +157,13 @@ const Main: React.FC = () => {
     window.location.href = "/login";
   };
 
-  const handleItemClick = (item: any) => {
-    const menuUrl = `/${item.AppMenuLabel.toLowerCase()}`;
-    navigate(menuUrl);
-  };
-
   const renderSidebarMenuItems = (menuItems: any[]) => {
     return menuItems.map((item: any) => {
-      const icon = <DefaultIcon />;
-      const isActive = item.AppMenuID === activeMenu;
-      const isSubmenuOpen = openMenus[item.AppMenuID] || false;
+      const isActive = item.AppMenuId === activeMenu;
+      const isSubmenuOpen = openMenus[item.AppMenuId] || false;
 
       return (
-        <div key={item.AppMenuID} className="relative flex flex-col space-y-2 bg-white">
+        <div key={item.AppMenuId} className="relative flex flex-col space-y-2 bg-white">
           <div
             className={`flex items-center p-2 rounded-lg transition-colors duration-200 ${item.children?.length
               ? "cursor-pointer text-black"
@@ -135,7 +180,7 @@ const Main: React.FC = () => {
               <span
                 className={`ml-auto transition-transform transform ${isSubmenuOpen ? "rotate-90" : ""
                   }`}
-                onClick={() => handleToggle(item.AppMenuID)}
+                onClick={() => handleToggle(item.AppMenuId)}
               >
                 <FaChevronDown></FaChevronDown>
               </span>
@@ -153,7 +198,7 @@ const Main: React.FC = () => {
   };
 
 
-  const DropdownMenu = ({ items }) => {
+  const DropdownMenu = ({ items }: { items: any }) => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     return (
@@ -168,7 +213,7 @@ const Main: React.FC = () => {
         {items.childMenus && (
           <div className={`absolute left-1 mt-2 bg-white border rounder shadow-lg ${isMenuOpen ? "block" : "hidden"}  `}>
             <ul className="py-2">
-              {items.childMenus.map((childItem, index) => (
+              {items.childMenus.map((childItem: any, index: number) => (
                 <li key={index} className="relative group">
                   <a href={childItem.link} className="block px-4 py-2 hover:bg-gray-100">
                     {childItem.AppMenuLabel}
@@ -217,7 +262,7 @@ const Main: React.FC = () => {
               <div className="flex items-center">
                 <span
                   className="text-base font-bold cursor-pointer hover:text-primary-50"
-                  onClick={() => toggleChildMenu(item.AppMenuID)}
+                  onClick={() => toggleChildMenu(item.AppMenuId)}
                 >
                   {item.AppMenuLabel}
                 </span>
@@ -227,9 +272,9 @@ const Main: React.FC = () => {
                 )}
               </div>
 
-              {openMenu === item.AppMenuID && item.childMenus && item.childMenus.length > 0 && (
+              {openMenu === item.AppMenuId && item.childMenus && item.childMenus.length > 0 && (
                 <ul className="absolute left-0 mt-2 bg-white border rounded shadow-lg">
-                  {item.childMenus.map((child, childIndex) => (
+                  {item.childMenus.map((child: any, childIndex: number) => (
                     <li key={childIndex} className="relative group">
                       <div className="flex items-center px-4 py-2 hover:bg-gray-200 cursor-pointer">
                         <span>{child.AppMenuLabel}</span>
@@ -239,7 +284,7 @@ const Main: React.FC = () => {
                       </div>
                       {child.child_Menus && child.child_Menus.length > 0 && (
                         <ul className="absolute left-full top-0 mt-0 bg-white border rounded shadow-lg hidden group-hover:block">
-                          {child.child_Menus.map((subChild, subChildIndex) => (
+                          {child.child_Menus.map((subChild: any, subChildIndex: number) => (
                             <li key={subChildIndex} className="px-4 py-2 hover:bg-gray-200">
                               {subChild.AppMenuLabel}
                             </li>
