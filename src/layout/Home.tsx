@@ -308,7 +308,7 @@ const Main: React.FC = () => {
         className="cursor-pointer"
         onClick={toggleDropdown}
       >
-        <CgProfile size={35} style={{ color: 'white' }} />
+        <CgProfile size={35} style={{ color: menuLocation === "side" ? 'white' : '#374151' }} />
       </div>
       {open && (
         <div className="absolute right-0 mt-2 w-48 bg-white shadow-lg rounded-md z-50">
@@ -361,7 +361,7 @@ const Main: React.FC = () => {
                 {renderTopMenuItems(nestedMenuItems)}
               </nav>
             </div>
-            <div className="flex-shrink-0 ml-4 rounded-full bg-primary-50">{renderProfileDropdown()}</div>
+            <div className="flex-shrink-0 ml-4">{renderProfileDropdown()}</div>
           </header>
 
           <main className="flex flex-col bg-primary-100 flex-grow">
