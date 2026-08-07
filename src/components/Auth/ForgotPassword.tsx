@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { showToast } from "../../utils/toastUtils";
 import config from "../../config/default.json";
+import { createPublicClient } from "../../services/DFService";
 
 
 
@@ -16,28 +17,12 @@ const ForgotPassword: React.FC = () => {
         setIsLoading(true);
 
         try {
-            const userData = JSON.parse(localStorage.getItem("userData") || "{}");
-            const token = userData.token;
-
             // V3 SDK: POST /api/v3/Auth/forgot-password
-            // Using fetch directly since SDK doesn't expose forgotPassword endpoint properly  
-            const response = await fetch(`${config.DF_API_URL}/api/v3/Auth/forgot-password`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token && { 'Authorization': `Bearer ${token}` })
-                },
-                body: JSON.stringify({
-                    email: workEmail,
-                    productCode: config.DF_PRODUCT_CODE
-                })
+            const client = createPublicClient();
+            const result = await client.api.v3.auth.forgotPassword.post({
+                email: workEmail,
+                productCode: config.DF_PRODUCT_CODE
             });
-            
-            if (!response.ok) {
-                throw new Error('Forgot password request failed');
-            }
-
-            const result = await response.json();
             console.log('[ForgotPassword] Response:', result);
             
             if (result) {

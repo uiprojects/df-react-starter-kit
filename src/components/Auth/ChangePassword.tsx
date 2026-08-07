@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { showToast } from "../../utils/toastUtils";
-import config from "../../config/default.json";
+import { createAuthenticatedClient } from "../../services/DFService";
 
 
 const ChangePassword: React.FC = () => {
@@ -74,22 +74,14 @@ const ChangePassword: React.FC = () => {
       }
 
       // V3 SDK: PUT /api/v3/User/{id}/password
-      // Using fetch directly since SDK doesn't expose password endpoint properly
-      const response = await fetch(`${config.DF_API_URL}/api/v3/User/${userId}/password`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId: userId,
-          oldPassword: passwordData.oldPassword,
-          newPassword: passwordData.newPassword,
-          updatedBy: userId
-        })
+      const client = createAuthenticatedClient(token);
+      const result = await client.api.v3.user.byId(userId).password.put({
+        oldPassword: passwordData.oldPassword,
+        dfUPassword: passwordData.newPassword,
+        isResetPassword: 0
       });
 
-      if (!response.ok) {
+      if (!result) {
         throw new Error('Password change failed');
       }
 

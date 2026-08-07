@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { PublicClientApplication } from "@azure/msal-browser";
 import logo from "../assets/DF-Logo.svg";
 import microsoftIcon from "../images/microsoftIcon.svg";
-import { login, microsoftLogin } from "../services/authService";
+import { login, microsoftLogin, getMsAuthConfig } from "../services/authService";
 import config from "../config/default.json";
 import { useCookies } from 'react-cookie';
 import { FaEye, FaEyeSlash } from 'react-icons/fa'
@@ -46,24 +46,47 @@ const Login: React.FC = () => {
     const fetchMsalConfig = async () => {
       try {
         console.log('[Login] Starting MS Auth initialization...');
-        
-        // ============================================================
-        // HARDCODED MS AUTH CONFIG (aligned with DFWebApi)
-        // ============================================================
-        const hardcodedMsAuthConfig = {
-          clientId: 'd27786fb-a9f1-494e-99ed-88e069cc3be0',
-          tenantId: 'e271a785-c3b4-49f6-9342-94866f0f0587',
-          authority: 'https://login.microsoftonline.com/e271a785-c3b4-49f6-9342-94866f0f0587',
-          callbackPath: '/login'
-        };
 
-        console.log('[Login] Using hardcoded MS Auth config:', hardcodedMsAuthConfig);
+        console.log('[Login] Config values:', {
+          DF_TENANT_ID: config.DF_TENANT_ID,
+          DF_API_URL: config.DF_API_URL
+        });
+
+        const tenantId = parseInt(config.DF_TENANT_ID);
+
+        if (!tenantId || isNaN(tenantId)) {
+          console.warn('[Login] Tenant ID not configured properly:', config.DF_TENANT_ID);
+          return;
+        }
+
+        console.log('[Login] Fetching MS Auth config for tenant:', tenantId);
+        // Fetch MS Auth configuration from backend
+        const msAuthConfig = await getMsAuthConfig(tenantId);
+
+        console.log('[Login] MS Auth config result:', msAuthConfig);
+
+        if (!msAuthConfig || !msAuthConfig.clientId) {
+          console.warn('[Login] Microsoft authentication not configured for this tenant');
+          console.warn('[Login] Make sure MSAUTH is configured in your tenant settings');
+          setIsMsAuthAvailable(false);
+          return;
+        }
+
+        console.log('[Login] Microsoft auth configured successfully:', {
+          clientId: msAuthConfig.clientId,
+          tenantId: msAuthConfig.tenantId
+        });
+
+        // Use tenant-specific authority if provided, otherwise use common
+        const authority = msAuthConfig.tenantId
+          ? `https://login.microsoftonline.com/${msAuthConfig.tenantId}`
+          : config.MS_AUTHORITY || 'https://login.microsoftonline.com/common';
 
         const msalConfig = {
           auth: {
-            clientId: hardcodedMsAuthConfig.clientId,
-            authority: hardcodedMsAuthConfig.authority,
-            redirectUri: window.location.origin + hardcodedMsAuthConfig.callbackPath,
+            clientId: msAuthConfig.clientId!,
+            authority: authority,
+            redirectUri: window.location.origin + (msAuthConfig.callbackPath || "/login"),
           },
           cache: {
             cacheLocation: "sessionStorage" as const,
@@ -77,63 +100,6 @@ const Login: React.FC = () => {
         setMsalApp(Instance);
         setIsMsAuthAvailable(true);
         console.log('[Login] ✅ MS Auth initialized successfully - button should be visible');
-
-        // ============================================================
-        // COMMENTED OUT: Dynamic fetch from backend
-        // ============================================================
-        // console.log('[Login] Config values:', {
-        //   DF_TENANT_ID: config.DF_TENANT_ID,
-        //   DF_API_URL: config.DF_API_URL
-        // });
-        // 
-        // const tenantId = parseInt(config.DF_TENANT_ID);
-        // 
-        // if (!tenantId || isNaN(tenantId)) {
-        //   console.warn('[Login] Tenant ID not configured properly:', config.DF_TENANT_ID);
-        //   return;
-        // }
-        //
-        // console.log('[Login] Fetching MS Auth config for tenant:', tenantId);
-        // // Fetch MS Auth configuration from backend
-        // const msAuthConfig = await getMsAuthConfig(tenantId);
-        // 
-        // console.log('[Login] MS Auth config result:', msAuthConfig);
-        // 
-        // if (!msAuthConfig || !msAuthConfig.clientId) {
-        //   console.warn('[Login] Microsoft authentication not configured for this tenant');
-        //   console.warn('[Login] Make sure MSAUTH is configured in your tenant settings');
-        //   setIsMsAuthAvailable(false);
-        //   return;
-        // }
-        //
-        // console.log('[Login] Microsoft auth configured successfully:', { 
-        //   clientId: msAuthConfig.clientId,
-        //   tenantId: msAuthConfig.tenantId 
-        // });
-        //
-        // // Use tenant-specific authority if provided, otherwise use common
-        // const authority = msAuthConfig.tenantId 
-        //   ? `https://login.microsoftonline.com/${msAuthConfig.tenantId}`
-        //   : config.MS_AUTHORITY || 'https://login.microsoftonline.com/common';
-        //
-        // const msalConfig = {
-        //   auth: {
-        //     clientId: msAuthConfig.clientId!,
-        //     authority: authority,
-        //     redirectUri: window.location.origin + (msAuthConfig.callbackPath || "/login"),
-        //   },
-        //   cache: {
-        //     cacheLocation: "sessionStorage" as const,
-        //     storeAuthStateInCookie: false,
-        //   },
-        // };
-        //
-        // const Instance = new PublicClientApplication(msalConfig);
-        // await Instance.initialize();
-        // await Instance.handleRedirectPromise();
-        // setMsalApp(Instance);
-        // setIsMsAuthAvailable(true);
-        // console.log('[Login] ✅ MS Auth initialized successfully - button should be visible');
       }
       catch (error) {
          console.error('[Login] ❌ Error initializing Microsoft auth:', error);

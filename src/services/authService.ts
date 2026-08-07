@@ -47,10 +47,12 @@ export const getAuthenticationTypes = async (tenantId?: number, authTypeCode?: s
       response = await client.api.v3.tenant.byId(tenantId).authenticationTypes.get({
         queryParameters: { authenticationTypeCode: authTypeCode }
       });
+      console.log('response',response);
     } else {
       console.log('[AuthService] Fetching all auth types (no tenant specified)');
       // Fallback: Get all auth types (requires tenant ID in production)
       response = await client.api.v3.tenant.authenticationTypes.get();
+
     }
     
     console.log('[AuthService] Auth types response:', response);

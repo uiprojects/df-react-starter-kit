@@ -255,20 +255,20 @@ const Main: React.FC = () => {
     }, []);
     return (
       <div className="relative" ref={menuRef}>
-        <ul className="flex items-center space-x-4">
+        <ul className="flex items-center space-x-1.5">
           {menuItems.map((item, index) => (
             <li key={index} className="relative">
               {/* Top-level menu label */}
-              <div className="flex items-center">
-                <span
-                  className="text-base font-bold cursor-pointer hover:text-primary-50"
-                  onClick={() => toggleChildMenu(item.AppMenuId)}
-                >
+              <div
+                className={`flex items-center whitespace-nowrap px-3 py-1.5 rounded-full transition-colors duration-200 cursor-pointer text-sm font-medium ${openMenu === item.AppMenuId ? "bg-primary-600 text-white shadow-sm" : "bg-gray-100 text-gray-700 hover:bg-primary-100 hover:text-primary-600"}`}
+                onClick={() => toggleChildMenu(item.AppMenuId)}
+              >
+                <span className="cursor-pointer">
                   {item.AppMenuLabel}
                 </span>
 
                 {item.childMenus && item.childMenus.length > 0 && (
-                  <FaChevronDown className="ml-2 text-sm cursor-pointer" />
+                  <FaChevronDown className="ml-2 text-xs cursor-pointer" />
                 )}
               </div>
 
@@ -355,14 +355,14 @@ const Main: React.FC = () => {
       ) : (
         <>
           <header className="flex justify-between text-black items-center p-4 shadow-md border-b border-gray-200 bg-white">
-            <div className="flex items-center space-x-4">
-              <img src={logo} className="h-12" alt="Logo" />
-              <nav className="flex space-x-4">
+            <div className="flex items-center space-x-4 min-w-0 flex-1">
+              <img src={logo} className="h-12 flex-shrink-0" alt="Logo" />
+              <nav className="flex items-center space-x-1.5 overflow-x-auto min-w-0">
                 {renderTopMenuItems(nestedMenuItems)}
               </nav>
             </div>
+            <div className="flex-shrink-0 ml-4 rounded-full bg-primary-50">{renderProfileDropdown()}</div>
           </header>
-          <div className="absolute top-4 right-4 rounded-full mt-2 bg-primary-50 ">{renderProfileDropdown()}</div>
 
           <main className="flex flex-col bg-primary-100 flex-grow">
             <div className="p-5">
