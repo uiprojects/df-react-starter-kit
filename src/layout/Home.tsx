@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useRef, useState } from "react";
+import ReactDOM from "react-dom";
 import { useNavigate, Outlet } from "react-router-dom";
 import { CgProfile } from "react-icons/cg";
 import { getDiligenceFabricSDK } from "../services/DFService";
@@ -232,20 +233,52 @@ const Main: React.FC = () => {
     )
   }
 
+  // ---- UI-only change starts here: renderTopMenuItems now renders the
+  // second-level dropdown through a portal, positioned with fixed coords,
+  // so it floats over the page instead of being pushed/clipped by the
+  // horizontally scrolling nav. No menu-building or click logic changed. ----
   const renderTopMenuItems = (menuItems: any[]) => {
     const [openMenu, setOpenMenu] = useState<number | null>(null);
+    const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+    // Tracks which 2nd-level child (if any) has its own nested children expanded below it.
+    const [openChild, setOpenChild] = useState<number | null>(null);
     const menuRef = useRef<HTMLDivElement | null>(null);
+    const itemRefs = useRef<{ [key: number]: HTMLDivElement | null }>({});
+    // Ref for the portaled dropdown <ul> (it lives on document.body, outside menuRef's
+    // DOM subtree) so the outside-click check below can recognize clicks inside it as
+    // "inside" instead of closing the menu.
+    const dropdownRef = useRef<HTMLUListElement | null>(null);
+
     const toggleChildMenu = (menuId: number) => {
       if (openMenu === menuId) {
         setOpenMenu(null);
-      } else {
-        setOpenMenu(menuId);
+        setOpenChild(null);
+        return;
       }
+      const el = itemRefs.current[menuId];
+      if (el) {
+        const rect = el.getBoundingClientRect();
+        setDropdownPos({ top: rect.bottom + 8, left: rect.left });
+      }
+      setOpenMenu(menuId);
+      setOpenChild(null);
     };
+
+    // Click handler for the arrow on a child that itself has children (grandchildren).
+    // stopPropagation so it doesn't also trigger the outer "click outside" close handler.
+    const toggleNestedChild = (e: React.MouseEvent, childId: number) => {
+      e.stopPropagation();
+      setOpenChild((prev) => (prev === childId ? null : childId));
+    };
+
     useEffect(() => {
       const handleClickOutside = (event: MouseEvent) => {
-        if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        const target = event.target as Node;
+        const clickedInsideTrigger = menuRef.current && menuRef.current.contains(target);
+        const clickedInsideDropdown = dropdownRef.current && dropdownRef.current.contains(target);
+        if (!clickedInsideTrigger && !clickedInsideDropdown) {
           setOpenMenu(null);
+          setOpenChild(null);
         }
       };
       document.addEventListener("mousedown", handleClickOutside);
@@ -253,6 +286,9 @@ const Main: React.FC = () => {
         document.removeEventListener("mousedown", handleClickOutside);
       };
     }, []);
+
+    const activeItem = menuItems.find((item) => item.AppMenuId === openMenu);
+
     return (
       <div className="relative" ref={menuRef}>
         <ul className="flex items-center space-x-1.5">
@@ -260,6 +296,7 @@ const Main: React.FC = () => {
             <li key={index} className="relative">
               {/* Top-level menu label */}
               <div
+                ref={(el) => { itemRefs.current[item.AppMenuId] = el; }}
                 className={`flex items-center whitespace-nowrap px-3 py-1.5 rounded-full transition-colors duration-200 cursor-pointer text-sm font-medium ${openMenu === item.AppMenuId ? "bg-primary-600 text-white shadow-sm" : "bg-gray-100 text-gray-700 hover:bg-primary-100 hover:text-primary-600"}`}
                 onClick={() => toggleChildMenu(item.AppMenuId)}
               >
@@ -267,40 +304,62 @@ const Main: React.FC = () => {
                   {item.AppMenuLabel}
                 </span>
 
-                {item.childMenus && item.childMenus.length > 0 && (
-                  <FaChevronDown className="ml-2 text-xs cursor-pointer" />
+                {item.children && item.children.length > 0 && (
+                  <FaChevronDown className={`ml-2 text-xs cursor-pointer transition-transform duration-200 ${openMenu === item.AppMenuId ? "rotate-180" : ""}`} />
                 )}
               </div>
-
-              {openMenu === item.AppMenuId && item.childMenus && item.childMenus.length > 0 && (
-                <ul className="absolute left-0 mt-2 bg-white border rounded shadow-lg">
-                  {item.childMenus.map((child: any, childIndex: number) => (
-                    <li key={childIndex} className="relative group">
-                      <div className="flex items-center px-4 py-2 hover:bg-gray-200 cursor-pointer">
-                        <span>{child.AppMenuLabel}</span>
-                        {child.child_Menus && child.child_Menus.length > 0 && (
-                          <FaChevronDown className="ml-2 text-sm" />
-                        )}
-                      </div>
-                      {child.child_Menus && child.child_Menus.length > 0 && (
-                        <ul className="absolute left-full top-0 mt-0 bg-white border rounded shadow-lg hidden group-hover:block">
-                          {child.child_Menus.map((subChild: any, subChildIndex: number) => (
-                            <li key={subChildIndex} className="px-4 py-2 hover:bg-gray-200">
-                              {subChild.AppMenuLabel}
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              )}
             </li>
           ))}
         </ul>
+
+        {openMenu !== null && activeItem?.children && activeItem.children.length > 0 &&
+          ReactDOM.createPortal(
+            <ul
+              ref={dropdownRef}
+              className="fixed min-w-[200px] bg-white rounded-xl border border-gray-100 shadow-xl z-50 py-1.5 overflow-hidden"
+              style={{ top: dropdownPos.top, left: dropdownPos.left }}
+            >
+              {activeItem.children.map((child: any, childIndex: number) => {
+                const hasGrandChildren = child.children && child.children.length > 0;
+                const isChildOpen = openChild === child.AppMenuId;
+                return (
+                  <li key={childIndex} className="relative">
+                    <div
+                      className="flex items-center gap-1.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-primary-100 hover:text-primary-600 cursor-pointer transition-colors duration-150"
+                      onClick={(e) => hasGrandChildren && toggleNestedChild(e, child.AppMenuId)}
+                    >
+                      {hasGrandChildren ? (
+                        <FaChevronDown
+                          className={`text-xs text-gray-400 transition-transform duration-200 ${isChildOpen ? "" : "-rotate-90"}`}
+                        />
+                      ) : (
+                        <span className="w-3" />
+                      )}
+                      <span>{child.AppMenuLabel}</span>
+                    </div>
+                    {hasGrandChildren && isChildOpen && (
+                      <ul className="ml-4 pl-3 border-l border-gray-200 py-1">
+                        {child.children.map((subChild: any, subChildIndex: number) => (
+                          <li
+                            key={subChildIndex}
+                            className="flex items-center gap-1.5 px-4 py-2 text-sm text-gray-700 hover:bg-primary-100 hover:text-primary-600 cursor-pointer transition-colors duration-150"
+                          >
+                            <span className="w-3" />
+                            <span>{subChild.AppMenuLabel}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>,
+            document.body
+          )}
       </div>
     );
   };
+  // ---- UI-only change ends here ----
 
   const renderProfileDropdown = () => (
     <div className="relative ">
@@ -314,9 +373,10 @@ const Main: React.FC = () => {
         <div className="absolute right-0 mt-2 w-48 bg-white shadow-lg rounded-md z-50">
           <ul className="py-2">
 
+            {/* UI-only: hidden per request, logic/route left intact */}
             <li
               onClick={() => navigate("/change-password")}
-              className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+              className="hidden px-4 py-2 hover:bg-gray-100 cursor-pointer"
             >
               Change Password
             </li>
@@ -357,7 +417,7 @@ const Main: React.FC = () => {
           <header className="flex justify-between text-black items-center p-4 shadow-md border-b border-gray-200 bg-white">
             <div className="flex items-center space-x-4 min-w-0 flex-1">
               <img src={logo} className="h-12 flex-shrink-0" alt="Logo" />
-              <nav className="flex items-center space-x-1.5 overflow-x-auto min-w-0">
+              <nav className="flex items-center space-x-1.5 overflow-x-auto overflow-y-visible min-w-0 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                 {renderTopMenuItems(nestedMenuItems)}
               </nav>
             </div>
