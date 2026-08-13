@@ -175,11 +175,12 @@ const Login: React.FC = () => {
   const formLogin = async (event: React.FormEvent) => {
     event.preventDefault();
 
-    // V3 SDK: Use camelCase property names
+    // V3 SDK: LoginRequest model fields are email/password/authTypeCode/productCode
     const authRequest = {
-      username: username,
+      email: username,
       password: password,
-      authenticationTypeCode: "FORM",
+      authTypeCode: "FORM",
+      productCode: config.DF_PRODUCT_CODE,
     };
 
     await handleLogin(authRequest, false);

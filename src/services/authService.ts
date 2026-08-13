@@ -120,14 +120,43 @@ export const login = async (authenticationRequest: any) => {
     const client = createPublicClient();
     
     // V3 SDK: client.api.v3.auth.login.post(requestBody)
-    const response = await client.api.v3.auth.login.post(authenticationRequest) as unknown as LoginResponse;
+    const rawResponse = await client.api.v3.auth.login.post(authenticationRequest) as unknown as any;
+    
+    console.log('[AuthService] Raw login response:', JSON.stringify(rawResponse, null, 2));
 
-    // V3 response doesn't have Result wrapper - direct response object
+    // V3 SDK wraps the actual payload inside additionalData (same pattern as microsoftLogin)
+    // Top-level email/productCode are echoed back from the request, but token/tenantId/etc live in additionalData
+    const response: LoginResponse = {
+      ...rawResponse.additionalData,
+      email: rawResponse.email ?? rawResponse.additionalData?.email,
+    };
+
+    console.log('[AuthService] Unwrapped response.tenantId:', response.tenantId, typeof response.tenantId);
+    console.log('[AuthService] config.DF_TENANT_ID:', config.DF_TENANT_ID, typeof config.DF_TENANT_ID);
+
+    if (!response.token) {
+      return {
+        status: 'ERROR',
+        message: 'Login failed: no token received.',
+      };
+    }
+
+    // V3 response is nested inside additionalData - compare tenantId as strings
     if (config.DF_TENANT_ID === response.tenantId?.toString()) {
       if (authenticationRequest.rememberMe === 'on') {
         Cookies.set('df_ds_rem_user', authenticationRequest.username, { expires: 7 });
       }
-      return { status: 'SUCCESS', response, message: 'Login Successful!' };
+      console.log('[AuthService] ✅ Login successful for user:', response.email, 'Tenant ID:', response.tenantId);
+
+      // Normalize the response with app info, same as microsoftLogin, so
+      // Home.tsx's fetchDataMenu has the appId/appEnvironmentCode it needs.
+      const normalizedResponse = {
+        ...response,
+        app: { appId: parseInt(config.DF_APP_ID) },
+        appEnvironmentCode: config.DF_AppEnvironmentCODE,
+      };
+
+      return { status: 'SUCCESS', response: normalizedResponse, message: 'Login Successful!' };
     } else {
       return {
         status: 'ERROR',

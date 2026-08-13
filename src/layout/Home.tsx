@@ -127,6 +127,10 @@ const Main: React.FC = () => {
         roots.push(itemMap[menuId]);
       } else if (itemMap[parentMenuId]) {
         itemMap[parentMenuId].children.push(itemMap[menuId]);
+      } else {
+        // Diagnostic only: parentMenuId is set but that parent isn't in this
+        // response, so this item would otherwise silently disappear.
+        console.warn(`[Home] Orphaned menu item: id=${menuId} ("${item.appMenuLabel || item.AppMenuLabel}") references missing parentAppMenuId=${parentMenuId} (not present in the API response)`);
       }
     });
 
