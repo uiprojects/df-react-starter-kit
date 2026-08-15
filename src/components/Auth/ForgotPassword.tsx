@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getDiligenceFabricSDK } from "../../services/DFService";
 import { showToast } from "../../utils/toastUtils";
+import config from "../../config/default.json";
+import { createPublicClient } from "../../services/DFService";
 
 
 
@@ -16,21 +17,23 @@ const ForgotPassword: React.FC = () => {
         setIsLoading(true);
 
         try {
-            const client = getDiligenceFabricSDK();
-
-            const response = await client.getAuthService().forgotPassword({email : workEmail});
-            console.log(response);
-             
-            if (response.StatusCode == 200) {
-                showToast("Email Send","success")
+            // V3 SDK: POST /api/v3/Auth/forgot-password
+            const client = createPublicClient();
+            const result = await client.api.v3.auth.forgotPassword.post({
+                email: workEmail,
+                productCode: config.DF_PRODUCT_CODE
+            });
+            console.log('[ForgotPassword] Response:', result);
+            
+            if (result) {
+                showToast("Email sent successfully","success")
                 setIsLoading(false)
                 navigate('/');
-              } 
-              else {
-                throw new Error(response.Message || "Forgot Password failed");
-              }
+            } else {
+                throw new Error("Forgot Password failed");
+            }
         } catch (error) {
-            showToast("Forgot password change Failed","error")
+            showToast("Forgot password request failed","error")
             console.error("Error Forgot Password:", error);
         } finally {
             setIsLoading(false);
