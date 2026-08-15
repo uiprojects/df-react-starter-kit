@@ -1,8 +1,10 @@
 {
-    "DF_APP_ID": "Add APP ID Here",
-    "DF_TENANT_ID": "Add Tenant ID Here",
-    "DF_API_URL": "Add API URL Here",
-    "DF_AppEnvironmentCODE": "Add App Environment Code Here",
-    "DF_API_VERSION": "Add API Version Here",
-    "PUBLIC_MENU_LOCATION": "Add Menu Location Here"
+  "DF_TENANT_ID": "Add Tenant ID here",
+  "DF_APP_ID": "Add App ID here",
+  "DF_AppEnvironmentCODE": "Add App Environment Code here",
+  "DF_API_URL": "Add API URL here",
+  "DF_API_VERSION": "Add API Version here",
+  "DF_PRODUCT_CODE": "Add Product Code here",
+  "PUBLIC_MENU_LOCATION": "Add Public Menu Location here",
+  "MS_AUTHORITY": "Add MS Authority URL here"
 }

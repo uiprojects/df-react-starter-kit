@@ -1,26 +1,25 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import { getDiligenceFabricSDK } from "../../services/DFService";
+import { useNavigate } from "react-router-dom";
 import { showToast } from "../../utils/toastUtils";
+import { createAuthenticatedClient } from "../../services/DFService";
 
 
 const ChangePassword: React.FC = () => {
 
   const [error, setError] = useState("");
-  const [formError, setFormError] = useState("");
   const [isLoading, setIsLoading] = useState(false); // Loading state
   const navigate = useNavigate();
 
   const initialValues = { oldPassword: "", newPassword: "", confirmPassword: "" };
   const [formValues, setFormValues] = useState(initialValues)
-  const [formErrors, setFormErrors] = useState({});
+  const [formErrors, setFormErrors] = useState<{ oldPassword?: string; newPassword?: string; confirmPassword?: string }>({});
   const [isSubmit, setIsSubmit] = useState(false);
 
   const handleChange = (e: any) => {
     const { name, value } = e.target;
     setFormValues({ ...formValues, [name]: value })
 
-    if (formErrors[name] && value) {
+    if (name in formErrors && formErrors[name as keyof typeof formErrors] && value) {
       setFormErrors({ ...formErrors, [name]: undefined });
     }
   }
@@ -39,7 +38,7 @@ const ChangePassword: React.FC = () => {
   }, [formErrors])
 
   const validate = (values: any) => {
-    const errors = {}
+    const errors: { oldPassword?: string; newPassword?: string; confirmPassword?: string } = {}
 
     if (!values.oldPassword) {
       errors.oldPassword = 'Old password is required';
@@ -66,25 +65,35 @@ const ChangePassword: React.FC = () => {
     setIsLoading(true)
 
     try {
-      const client = getDiligenceFabricSDK();
+      const userData = JSON.parse(localStorage.getItem("userData") || "{}");
+      const userId = userData.userId;
+      const token = userData.token;
 
-      const response = await client.getAuthService().changePassword({ oldPassword: passwordData.oldPassword, isResetPassword: 1, dfUPassword: passwordData.newPassword });
-
-      if (response.Result) {
-        localStorage.setItem("userData", JSON.stringify(response.Result));
-
-        showToast("Password changed successfully!", "success")
-        setIsLoading(false)
-        navigate(-1);
+      if (!userId || !token) {
+        throw new Error("User not authenticated");
       }
-      else {
-        throw new Error(response.Message || "Change Password failed");
+
+      // V3 SDK: PUT /api/v3/User/{id}/password
+      const client = createAuthenticatedClient(token);
+      const result = await client.api.v3.user.byId(userId).password.put({
+        oldPassword: passwordData.oldPassword,
+        dfUPassword: passwordData.newPassword,
+        isResetPassword: 0
+      });
+
+      if (!result) {
+        throw new Error('Password change failed');
       }
+
+      showToast("Password changed successfully!", "success")
+      setIsLoading(false)
+      navigate(-1);
     }
     catch (error) {
       showToast("Password Change Failed", "error")
       console.error("Error Change Password:", error);
       setError("Change Password Failed");
+      setIsLoading(false);
     }
   }
 
@@ -164,8 +173,8 @@ const ChangePassword: React.FC = () => {
                 <p className="text-red-600">{formErrors.confirmPassword}</p>
               </div>
               {/* Error Message */}
-              {formError && (
-                <p className="text-sm text-red-500 font-medium mt-2">{formError}</p>
+              {error && (
+                <p className="text-sm text-red-500 font-medium mt-2">{error}</p>
               )}
 
               <button type="submit" className="flex w-full justify-center rounded-md bg-primary-600 px-3 py-1.5 text-sm/6 font-semibold text-white shadow-sm hover:bg-primary-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600" disabled={isLoading}>
